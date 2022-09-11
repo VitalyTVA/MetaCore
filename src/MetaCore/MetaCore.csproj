@@ -4,10 +4,19 @@
     <TargetFramework>netstandard2.0</TargetFramework>
 	<OutputPath>..\..\..\MetaBinaries</OutputPath>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	<PackageOutputPath>..\..\..\MetaBinaries</PackageOutputPath>
+	<IncludeSymbols>true</IncludeSymbols>
+	<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	<Version>0.0.1-alpha</Version>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="rmdir %25userprofile%25\.nuget\packages\metacore /q /s" />
+  </Target>
 
 </Project>
