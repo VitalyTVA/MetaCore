@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-	<OutputPath>..\..\..\MetaBinaries</OutputPath>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	<PackageOutputPath>..\..\..\MetaBinaries</PackageOutputPath>
@@ -16,7 +15,8 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="rmdir %25userprofile%25\.nuget\packages\metacore /q /s" />
+    <Exec Command="rmdir %25userprofile%25\.nuget\packages\metacore /q /s" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
+    <Exec Command="rm -rf ~/.nuget/packages/metacore" Condition="$([MSBuild]::IsOSPlatform('OSX'))" />
   </Target>
 
 </Project>
