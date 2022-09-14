@@ -16,8 +16,12 @@ public class Scene {
         this.getAllowInput = getAllowInput;
         this.inputState = this.noInputState = new NoInputState(point => {
             var element = HitTest(point);
-            if(element != null)
-                return (element.GetPressState?.Invoke(point, noInputState!) ?? inputState)!;
+            if(element != null) {
+                var getPressState = element.GetPressState;
+                if(getPressState == null)
+                    return inputState!;
+                return getPressState(point) ?? noInputState!;
+            }
             return noInputState!;
         });
     }
@@ -53,19 +57,19 @@ public class Scene {
 
     public void Press(Vector2 point) {
         if(getAllowInput())
-            inputState = inputState.Press(point);
+            inputState = inputState.Press(point) ?? noInputState;
     }
     public void Drag(Vector2 point) {
         //if(getAllowInput())
-            inputState = inputState.Drag(point);
+            inputState = inputState.Drag(point) ?? noInputState;
     }
     public void Release(Vector2 point) {
         //if(getAllowInput())
-            inputState = inputState.Release(point);
+            inputState = inputState.Release(point) ?? noInputState;
     }
 }
 public abstract class Element {
-    public static Func<Vector2, NoInputState, InputState> GetAnchorAndSnapDragStateFactory(
+    public static Func<Vector2, InputState?> GetAnchorAndSnapDragStateFactory(
        Element element,
        Func<float> getAnchorDistance,
        Func<(float snapDistance, Vector2 snapPoint)?> getSnapInfo,
@@ -124,13 +128,13 @@ public abstract class Element {
     public Rect Rect { get; set; }
     public bool HitTestVisible { get; set; }
     public bool IsVisible { get; set; } = true;
-    public Func<Vector2, NoInputState, InputState>? GetPressState { get; set; }
+    public Func<Vector2, InputState?>? GetPressState { get; set; }
 }
 
 public abstract class InputState {
-    public abstract InputState Press(Vector2 point);
-    public abstract InputState Release(Vector2 point);
-    public abstract InputState Drag(Vector2 point);
+    public abstract InputState? Press(Vector2 point);
+    public abstract InputState? Release(Vector2 point);
+    public abstract InputState? Drag(Vector2 point);
 }
 
 public class InputHandlerElement : Element {
@@ -147,29 +151,28 @@ public class NoInputState : InputState {
         this.getPressState = getPressState;
     }
 
-    public override InputState Drag(Vector2 point) {
+    public override InputState? Drag(Vector2 point) {
         return this;
     }
 
-    public override InputState Press(Vector2 point) {
+    public override InputState? Press(Vector2 point) {
         return getPressState(point);
     }
 
-    public override InputState Release(Vector2 point) {
+    public override InputState? Release(Vector2 point) {
         return this;
     }
 }
 
 public class DragInputState : InputState {
-    public static Func<Vector2, NoInputState, InputState> GetDragHandler(Func<Vector2, bool> onDrag, Action<Vector2>? onRelease = null, Func<bool>? canDrag = null) {
-        return (startPoint, releaseState) => {
+    public static Func<Vector2, InputState?> GetDragHandler(Func<Vector2, bool> onDrag, Action<Vector2>? onRelease = null, Func<bool>? canDrag = null) {
+        return startPoint => {
             if(canDrag?.Invoke() == false)
-                return releaseState;
+                return null;
             return new DragInputState(
                 startPoint,
                 onDrag,
-                onRelease ?? (_ => { }),
-                releaseState
+                onRelease ?? (_ => { })
             );
         };
     }
@@ -177,40 +180,37 @@ public class DragInputState : InputState {
     readonly Vector2 startPoint;
     readonly Func<Vector2, bool> onDrag;
     readonly Action<Vector2> onRelease;
-    readonly InputState releaseState;
 
-    DragInputState(Vector2 startPoint, Func<Vector2, bool> onDrag, Action<Vector2> onRelease, InputState releaseState) {
+    DragInputState(Vector2 startPoint, Func<Vector2, bool> onDrag, Action<Vector2> onRelease) {
         this.startPoint = startPoint;
         this.onDrag = onDrag;
         this.onRelease = onRelease;
-        this.releaseState = releaseState;
     }
 
-    public override InputState Drag(Vector2 point) {
+    public override InputState? Drag(Vector2 point) {
         if(onDrag(point - startPoint))
             return this;
-        return releaseState;
+        return null;
     }
 
-    public override InputState Press(Vector2 point) {
-        return releaseState; // throw new InvalidOperationException();
+    public override InputState? Press(Vector2 point) {
+        return null; // throw new InvalidOperationException();
     }
 
-    public override InputState Release(Vector2 point) {
+    public override InputState? Release(Vector2 point) {
         onRelease(point - startPoint);
-        return releaseState;
+        return null;
     }
 }
 
 public class HoverInputState : InputState {
-    public static Func<Vector2, NoInputState, InputState> GetHoverHandler(Scene scene, Element element, Action<Element> onHover, Action onRelease) {
-        return (startPoint, releaseState) => {
+    public static Func<Vector2, InputState?> GetHoverHandler(Scene scene, Element element, Action<Element> onHover, Action onRelease) {
+        return startPoint => {
             return new HoverInputState(
                 scene,
                 element,
                 onHover,
-                onRelease,
-                releaseState
+                onRelease
             );
         };
     }
@@ -218,53 +218,50 @@ public class HoverInputState : InputState {
     readonly Scene scene;
     readonly Action<Element> onHover;
     readonly Action onRelease;
-    readonly InputState releaseState;
 
-    HoverInputState(Scene scene, Element element, Action<Element> onHover, Action onRelease, InputState releaseState) {
+    HoverInputState(Scene scene, Element element, Action<Element> onHover, Action onRelease) {
         this.scene = scene;
         this.onHover = onHover;
         this.onRelease = onRelease;
-        this.releaseState = releaseState;
         onHover(element);
     }
 
-    public override InputState Drag(Vector2 point) {
+    public override InputState? Drag(Vector2 point) {
         var element = scene.HitTest(point);
         if(element != null)
             onHover(element);
         return this;
     }
 
-    public override InputState Press(Vector2 point) {
+    public override InputState? Press(Vector2 point) {
         throw new InvalidOperationException();
     }
 
-    public override InputState Release(Vector2 point) {
+    public override InputState? Release(Vector2 point) {
         onRelease();
-        return releaseState;
+        return null;
     }
 }
 
 public class TapInputState : InputState {
-    public static Func<Vector2, NoInputState, InputState> GetClickHandler(Element element, Action click, Action<bool> setState) {
-        return (startPoint, releaseState) => {
+    public static Func<Vector2, InputState?> GetClickHandler(Element element, Action click, Action<bool> setState) {
+        return startPoint => {
             return new TapInputState(
                 element,
                 click,
-                setState: setState,
-                releaseState
+                setState: setState
             );
         };
     }
-    public static Func<Vector2, NoInputState, InputState> GetPressReleaseHandler(
+    public static Func<Vector2, InputState?> GetPressReleaseHandler(
         Element element,
         Action onPress,
         Action onRelease
      ) {
-        return (startPoint, releaseState) => {
+        return startPoint => {
             if(!element.HitTestVisible) {
                 Debug.Fail("handler on hit test invisible element");
-                return releaseState;
+                return null;
             }
             onPress();
             return new TapInputState(
@@ -272,42 +269,38 @@ public class TapInputState : InputState {
                 () => { },
                 setState: isPressed => {
                     if(!isPressed) onRelease?.Invoke();
-                },
-                releaseState
-            );
+                }            );
         };
     }
 
     readonly Element element;
     readonly Action onTap;
     readonly Action<bool> setState;
-    readonly InputState releaseState;
 
-    TapInputState(Element element, Action onTap, Action<bool> setState, InputState releaseState) {
+    TapInputState(Element element, Action onTap, Action<bool> setState) {
         this.element = element;
         this.onTap = onTap;
         this.setState = setState;
-        this.releaseState = releaseState;
         setState(true);
     }
 
-    public override InputState Drag(Vector2 point) {
+    public override InputState? Drag(Vector2 point) {
         if(!element.Rect.Contains(point)) {
             setState(false);
-            return releaseState;
+            return null;
         }
         return this;
     }
 
-    public override InputState Press(Vector2 point) {
+    public override InputState? Press(Vector2 point) {
         throw new InvalidOperationException();
     }
 
-    public override InputState Release(Vector2 point) {
+    public override InputState? Release(Vector2 point) {
         setState(false);
         if(element.IsVisible)
             onTap();
-        return releaseState;
+        return null;
     }
 }
 
