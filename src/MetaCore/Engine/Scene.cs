@@ -77,44 +77,40 @@ public abstract class Element {
      ) {
         bool allowDrag = true;
         bool anchored = true;
-        return (startPoint, releaseState) => {
-            if (!allowDrag)
-                return releaseState;
-
-            var startRect = element.Rect;
-
-            bool IsAnchored(Vector2 delta) {
-                var anchorDistance = getAnchorDistance();
-                return anchored && delta.LengthSquared() < anchorDistance * anchorDistance;
-            }
-
-            return new DragInputState(startPoint, 
-               onDrag: delta => {
-                    Rect newRect = startRect;
-                    if (!IsAnchored(delta)) {
-                        newRect = newRect.Offset(delta);
-                        anchored = false;
-                    }
-                    var snapInfo = getSnapInfo();
-                    if (snapInfo != null && (newRect.Location - snapInfo.Value.snapPoint).LengthSquared() <= snapInfo.Value.snapDistance * snapInfo.Value.snapDistance) {
-                        newRect = new Rect(snapInfo.Value.snapPoint, newRect.Size);
-                        allowDrag = false;
-                        onElementSnap(element);
-                    }
-                    if(coerceRectLocation != null)
-                        newRect = new Rect(coerceRectLocation(newRect), newRect.Size);
-                    element.Rect = newRect;
-                    onMove?.Invoke();
-                    return allowDrag;
-                },
-                onRelease: delta => {
-                    if(IsAnchored(delta)) { 
-                        onClick?.Invoke();
-                    }
-                    anchored = onRelease?.Invoke(anchored) ?? false;
-                }, 
-                releaseState);
-        };
+        Rect startRect = default;
+        bool IsAnchored(Vector2 delta) {
+            var anchorDistance = getAnchorDistance();
+            return anchored && delta.LengthSquared() < anchorDistance * anchorDistance;
+        }
+        return DragInputState.GetDragHandler( 
+           onDrag: delta => {
+                Rect newRect = startRect;
+                if (!IsAnchored(delta)) {
+                    newRect = newRect.Offset(delta);
+                    anchored = false;
+                }
+                var snapInfo = getSnapInfo();
+                if (snapInfo != null && (newRect.Location - snapInfo.Value.snapPoint).LengthSquared() <= snapInfo.Value.snapDistance * snapInfo.Value.snapDistance) {
+                    newRect = new Rect(snapInfo.Value.snapPoint, newRect.Size);
+                    allowDrag = false;
+                    onElementSnap(element);
+                }
+                if(coerceRectLocation != null)
+                    newRect = new Rect(coerceRectLocation(newRect), newRect.Size);
+                element.Rect = newRect;
+                onMove?.Invoke();
+                return allowDrag;
+            },
+            onRelease: delta => {
+                if(IsAnchored(delta)) { 
+                    onClick?.Invoke();
+                }
+                anchored = onRelease?.Invoke(anchored) ?? false;
+            }, 
+            canDrag: () => {
+                startRect = element.Rect;
+                return allowDrag;
+        });
     }
     public static Action CreateSetOffsetAction(Element parent, Element[] children) {
         var pairs = children.Select(element => (element, parentOffset: element.Rect.Location - parent.Rect.Location)).ToArray();
@@ -165,12 +161,25 @@ public class NoInputState : InputState {
 }
 
 public class DragInputState : InputState {
+    public static Func<Vector2, NoInputState, InputState> GetDragHandler(Func<Vector2, bool> onDrag, Action<Vector2>? onRelease = null, Func<bool>? canDrag = null) {
+        return (startPoint, releaseState) => {
+            if(canDrag?.Invoke() == false)
+                return releaseState;
+            return new DragInputState(
+                startPoint,
+                onDrag,
+                onRelease ?? (_ => { }),
+                releaseState
+            );
+        };
+    }
+
     readonly Vector2 startPoint;
     readonly Func<Vector2, bool> onDrag;
     readonly Action<Vector2> onRelease;
     readonly InputState releaseState;
 
-    public DragInputState(Vector2 startPoint, Func<Vector2, bool> onDrag, Action<Vector2> onRelease, InputState releaseState) {
+    DragInputState(Vector2 startPoint, Func<Vector2, bool> onDrag, Action<Vector2> onRelease, InputState releaseState) {
         this.startPoint = startPoint;
         this.onDrag = onDrag;
         this.onRelease = onRelease;
@@ -194,12 +203,24 @@ public class DragInputState : InputState {
 }
 
 public class HoverInputState : InputState {
+    public static Func<Vector2, NoInputState, InputState> GetHoverHandler(Scene scene, Element element, Action<Element> onHover, Action onRelease) {
+        return (startPoint, releaseState) => {
+            return new HoverInputState(
+                scene,
+                element,
+                onHover,
+                onRelease,
+                releaseState
+            );
+        };
+    }
+
     readonly Scene scene;
     readonly Action<Element> onHover;
     readonly Action onRelease;
     readonly InputState releaseState;
 
-    public HoverInputState(Scene scene, Element element, Action<Element> onHover, Action onRelease, InputState releaseState) {
+    HoverInputState(Scene scene, Element element, Action<Element> onHover, Action onRelease, InputState releaseState) {
         this.scene = scene;
         this.onHover = onHover;
         this.onRelease = onRelease;
