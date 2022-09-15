@@ -1,4 +1,6 @@
 ﻿
+using System.Globalization;
+
 namespace MetaArt.Core;
 public class Scene {
     public readonly float width, height;
@@ -352,5 +354,25 @@ public class FadeOutElement : Element {
         HitTestVisible = true;
     }
 }
+
+public record struct Storage(Func<string, string?> getValue, Action<string, string?> setValue);
+
+public static class StorageExtensions {
+    public static Storage CreateInMemoryStorage() {
+        var dictionary = new Dictionary<string, string?>();
+        return new Storage(
+            name => {
+                if(dictionary.TryGetValue(name, out var value))
+                    return value;
+                return null;
+            },
+            (name, value) => dictionary[name] = value
+        );
+    }
+
+    public static int GetInt(this Storage storage, string name) => int.Parse(storage.getValue(name) ?? "0", CultureInfo.InvariantCulture);
+    public static void SetInt(this Storage storage, string name, int value) => storage.setValue(name, value.ToString(CultureInfo.InvariantCulture));
+}
+
 public record struct SceneContext(Action? clear);
 
