@@ -304,3 +304,53 @@ public class TapInputState : InputState {
     }
 }
 
+
+public sealed class Engine {
+    public readonly Scene scene;
+    public readonly AnimationsController animations = new();
+    public Engine(float width, float height) {
+        scene = new Scene(width, height, () => animations.AllowInput);
+    }
+    public void NextFrame(TimeSpan delta) {
+        animations.Next(delta);
+    }
+
+    public void StartFade(Action end, TimeSpan duration) {
+        StartFadeCore(0, 255, end, duration);
+    }
+    void StartFadeCore(float from, float to, Action end, TimeSpan duration) {
+        var element = new FadeOutElement() { Rect = new Rect(0, 0, scene.width, scene.height), Opacity = from };
+        var animation = new LerpAnimation<float> {
+            Duration = duration,
+            From = from,
+            To = to,
+            SetValue = value => element.Opacity = value,
+            Lerp = MathF.Lerp,
+            End = () => {
+                scene.RemoveElement(element);
+                end();
+            }
+        };
+        animations.AddAnimation(animation, blockInput: false);
+        scene.AddElement(element);
+    }
+    Action? clearScene;
+    public void SetScene(Func<SceneContext> start, TimeSpan duration) {
+        clearScene?.Invoke();
+        scene.ClearElements();
+#if DEBUG
+        animations.VerifyEmpty();//TODO call log function instead
+#endif
+        animations.ClearAll();
+        clearScene = start().clear;
+        StartFadeCore(255, 0, () => { }, duration);
+    }
+}
+public class FadeOutElement : Element {
+    public float Opacity { get; set; }
+    public FadeOutElement() {
+        HitTestVisible = true;
+    }
+}
+public record struct SceneContext(Action? clear);
+
