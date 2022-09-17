@@ -372,6 +372,8 @@ public static class StorageExtensions {
 
     public static int GetInt(this Storage storage, string name) => int.Parse(storage.getValue(name) ?? "0", CultureInfo.InvariantCulture);
     public static void SetInt(this Storage storage, string name, int value) => storage.setValue(name, value.ToString(CultureInfo.InvariantCulture));
+    public static bool GetBool(this Storage storage, string name) => bool.Parse(storage.getValue(name) ?? bool.FalseString);
+    public static void SetBool(this Storage storage, string name, bool value) => storage.setValue(name, value.ToString());
 }
 
 public record struct SceneContext(Action? clear);
