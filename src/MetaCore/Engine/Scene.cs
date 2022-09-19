@@ -51,6 +51,9 @@ public class Scene {
     public bool RemoveElement(Element element) {
         return elements.Remove(element);
     }
+    public bool ContainsElement(Element element) {
+        return elements.Contains(element);
+    }
     public void ClearElements() => elements.Clear();
     public void SendToBack(Element element) {
         if(!RemoveElement(element)) throw new InvalidOperationException();
@@ -372,6 +375,12 @@ public static class StorageExtensions {
 
     public static int GetInt(this Storage storage, string name) => int.Parse(storage.getValue(name) ?? "0", CultureInfo.InvariantCulture);
     public static void SetInt(this Storage storage, string name, int value) => storage.setValue(name, value.ToString(CultureInfo.InvariantCulture));
+
+    //public static int? GetIntN(this Storage storage, string name) {
+    //    var value = storage.getValue(name);
+    //    return string.IsNullOrEmpty(value) ? null : int.Parse(value, CultureInfo.InvariantCulture);
+    //}
+    //public static void SetIntN(this Storage storage, string name, int? value) => storage.setValue(name, value == null ? string.Empty : value.Value.ToString(CultureInfo.InvariantCulture));
 
     public static bool GetBool(this Storage storage, string name) => bool.Parse(storage.getValue(name) ?? bool.FalseString);
     public static void SetBool(this Storage storage, string name, bool value) => storage.setValue(name, value.ToString());
