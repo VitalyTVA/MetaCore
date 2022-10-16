@@ -240,7 +240,8 @@ public class HoverInputState : InputState {
     }
 
     public override InputState? Press(Vector2 point) {
-        throw new InvalidOperationException();
+        onRelease();
+        return null;
     }
 
     public override InputState? Release(Vector2 point) {
@@ -299,7 +300,8 @@ public class TapInputState : InputState {
     }
 
     public override InputState? Press(Vector2 point) {
-        throw new InvalidOperationException();
+        setState(false);
+        return null;
     }
 
     public override InputState? Release(Vector2 point) {
