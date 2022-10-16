@@ -10,7 +10,9 @@ public static class MathF {
     public static float Sin(float angle) => (float)Math.Sin(angle);
     public static float Cos(float angle) => (float)Math.Cos(angle);
     public static float Sqrt(float value) => (float)Math.Sqrt(value);
+    public static float Pow(float x, float y) => (float)Math.Pow(x, y);
     public static float Atan2(float y, float x) => (float)Math.Atan2(y, x);
+    public static float Abs(float value) => (float)Math.Abs(value);
 
     public static bool GreaterOrEqual(float x, float y) => x + delta > y;
     public static bool LessOrEqual(float x, float y) => x - delta < y;
