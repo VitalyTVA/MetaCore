@@ -175,12 +175,16 @@ public class DragInputState : InputState {
         return startPoint => {
             if(canDrag?.Invoke() == false)
                 return null;
-            return new DragInputState(
-                startPoint,
-                onDrag,
-                onRelease ?? (_ => { })
-            );
+            return GetDragState(startPoint, onDrag, onRelease);
         };
+    }
+
+    public static DragInputState GetDragState(Vector2 startPoint, Func<Vector2, bool> onDrag, Action<Vector2>? onRelease = null) {
+        return new DragInputState(
+            startPoint,
+            onDrag,
+            onRelease ?? (_ => { })
+        );
     }
 
     readonly Vector2 startPoint;
