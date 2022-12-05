@@ -7,6 +7,10 @@
         public static IEnumerable<T> Yield<T>(this T value) { 
             yield return value;
         }
+        public static IEnumerable<T> YieldIfNotNull<T>(this T? value) {
+            if(value is not null)
+                yield return value;
+        }
         public static IEnumerable<T> Yield<T>(this (T, T) value) {
             yield return value.Item1;
             yield return value.Item2;
